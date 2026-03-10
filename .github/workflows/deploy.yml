@@ -1,4 +1,4 @@
-name: Deploy to GitHub Pages
+name: Build and Deploy to GitHub Pages
 
 on:
   push:
@@ -15,15 +15,22 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      - name: Setup Emscripten
+        uses: mymindstorm/setup-emsdk@v14
+
       - name: Prepare Distribution Folder
         run: |
           mkdir -p dist
-          cp index.html index.js index.wasm dist/
-          if [ -f student.dat ]; then cp student.dat dist/; fi
+          emcc main.c -o dist/index.html \
+            --shell-file shell_minimal.html \
+            -s ASYNCIFY \
+            -s NO_EXIT_RUNTIME=1 \
+            -s FORCE_FILESYSTEM=1 \
+            -idbfs \
+            -s "EXPORTED_RUNTIME_METHODS=['ccall', 'FS_syncfs']"
 
       - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           folder: dist
           branch: gh-pages
-          clean: true 
