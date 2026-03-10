@@ -26,8 +26,8 @@ jobs:
             -s ASYNCIFY \
             -s NO_EXIT_RUNTIME=1 \
             -s FORCE_FILESYSTEM=1 \
-            -idbfs \
-            -s "EXPORTED_RUNTIME_METHODS=['ccall', 'FS_syncfs']"
+            -s "EXPORTED_RUNTIME_METHODS=['ccall', 'FS_syncfs']" \
+            -lfilesystems.js
 
       - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
