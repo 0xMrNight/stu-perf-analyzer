@@ -12,15 +12,19 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      - name: Purge stale worktrees
+        run: git worktree prune
+
       - name: Setup Emscripten
         uses: mymindstorm/setup-emsdk@v14
 
       - name: Compile C to WASM
         run: |
-          emcc main.c -o index.html --shell-file shell_minimal.html -s NO_EXIT_RUNTIME=1 -s ASYNCIFY -s "EXPORTED_RUNTIME_METHODS=['ccall']"
+          mkdir dist
+          emcc main.c -o dist/index.html --shell-file shell_minimal.html -s NO_EXIT_RUNTIME=1 -s ASYNCIFY -s "EXPORTED_RUNTIME_METHODS=['ccall']"
 
       - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: . # The folder the action should deploy.
+          folder: dist # The folder the action should deploy.
           branch: gh-pages # The branch the action should deploy to.
