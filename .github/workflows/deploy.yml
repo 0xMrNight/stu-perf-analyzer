@@ -1,4 +1,4 @@
-name: Build and Deploy to GitHub Pages
+name: Deploy to GitHub Pages
 
 on:
   push:
@@ -6,25 +6,24 @@ on:
       - main
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write 
+    
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Purge stale worktrees
-        run: git worktree prune
-
-      - name: Setup Emscripten
-        uses: mymindstorm/setup-emsdk@v14
-
-      - name: Compile C to WASM
+      - name: Prepare Distribution Folder
         run: |
-          mkdir dist
-          emcc main.c -o dist/index.html --shell-file shell_minimal.html -s NO_EXIT_RUNTIME=1 -s ASYNCIFY -s "EXPORTED_RUNTIME_METHODS=['ccall']"
+          mkdir -p dist
+          cp index.html index.js index.wasm dist/
+          if [ -f student.dat ]; then cp student.dat dist/; fi
 
       - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: dist # The folder the action should deploy.
-          branch: gh-pages # The branch the action should deploy to.
+          folder: dist
+          branch: gh-pages
+          clean: true 
