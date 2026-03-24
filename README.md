@@ -2,13 +2,13 @@
 
 An application designed to manage student records and provide performance insights. 
 
-This project combines the performance of a **C-based backend** with the accessibility of a Python web interface**.
+This project combines the performance of a **C-based backend** with the accessibility of a Python web interface.
 
 Developed for `BACSE104`: Structured and Object Oriented Programming - Digital Assignment 1
 
 ## 🚀 Features
 
-- **Binary File Storage:** Data is persisted in a binary `.dat` file using C structures for high efficiency.
+- **Binary File Storage:** Data is persisted in a binary `students.dat` file using C structures for high efficiency.
 - **Student Management:**
   - Add new records (RegNo, Name, 3 Subject Marks).
   - Update existing marks.
@@ -40,11 +40,11 @@ The application uses a **hybrid architecture**:
    cd stu-perf-analyzer
    ```
 
-2. **Run the build script:**
+2. **Install the requirements and compile the C program**
    This will compile the C backend into an `analyzer` executable and install Flask dependencies.
    ```bash
-   chmod +x build.sh
-   ./build.sh
+   pip install -r requirements.txt
+   gcc main.c -o analyzer
    ```
 
 3. **Start the application:**
