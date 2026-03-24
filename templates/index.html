@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Student Performance Analyzer</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; padding-top: 20px; }
+        .card { margin-bottom: 20px; }
+        .stats-box { background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2 class="text-center mb-4">🎓 Student Performance Analyzer</h2>
+
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            {% for message in messages %}
+              <div class="alert alert-info alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <div class="row">
+            <!-- Add / Update Forms -->
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">Add Student</div>
+                    <div class="card-body">
+                        <form action="/add" method="POST">
+                            <input type="number" name="regNo" class="form-control mb-2" placeholder="Reg No" required>
+                            <input type="text" name="name" class="form-control mb-2" placeholder="Name" required>
+                            <div class="row">
+                                <div class="col"><input type="number" step="0.01" name="m1" class="form-control mb-2" placeholder="Sub 1" required></div>
+                                <div class="col"><input type="number" step="0.01" name="m2" class="form-control mb-2" placeholder="Sub 2" required></div>
+                                <div class="col"><input type="number" step="0.01" name="m3" class="form-control mb-2" placeholder="Sub 3" required></div>
+                            </div>
+                            <button type="submit" class="btn btn-success w-100">Add Record</button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header bg-secondary text-white">Update Marks</div>
+                    <div class="card-body">
+                        <form action="/update" method="POST">
+                            <input type="number" name="regNo" class="form-control mb-2" placeholder="Reg No to Update" required>
+                            <div class="row">
+                                <div class="col"><input type="number" step="0.01" name="m1" class="form-control mb-2" placeholder="Sub 1" required></div>
+                                <div class="col"><input type="number" step="0.01" name="m2" class="form-control mb-2" placeholder="Sub 2" required></div>
+                                <div class="col"><input type="number" step="0.01" name="m3" class="form-control mb-2" placeholder="Sub 3" required></div>
+                            </div>
+                            <button type="submit" class="btn btn-warning w-100">Update Record</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- List and Statistics -->
+            <div class="col-md-8">
+                <!-- Search -->
+                <form action="/search" method="GET" class="mb-3 d-flex gap-2">
+                    <input type="number" name="regNo" class="form-control" placeholder="Search by Reg No" value="{{ search_query or '' }}">
+                    <button type="submit" class="btn btn-info">Search</button>
+                    <a href="/" class="btn btn-outline-secondary">Reset</a>
+                </form>
+
+                {% if stats %}
+                <div class="row mb-3 text-center">
+                    <div class="col-md-3"><div class="stats-box"><h6>Avg</h6><strong>{{ stats.class_average }}</strong></div></div>
+                    <div class="col-md-3"><div class="stats-box"><h6>Topper</h6><strong>{{ stats.highest_name }}</strong></div></div>
+                    <div class="col-md-6">
+                        <div class="stats-box">
+                            <h6>Grades</h6>
+                            A: {{ stats.grade_dist.A }} | B: {{ stats.grade_dist.B }} | C: {{ stats.grade_dist.C }} | Fail: {{ stats.grade_dist.Fail }}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover bg-white shadow-sm rounded">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>RegNo</th>
+                                <th>Name</th>
+                                <th>Total</th>
+                                <th>Avg</th>
+                                <th>Grade</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for s in students %}
+                            <tr>
+                                <td>{{ s.regNo }}</td>
+                                <td>{{ s.name }}</td>
+                                <td>{{ s.total }}</td>
+                                <td>{{ s.average }}</td>
+                                <td><span class="badge {% if s.grade == 'Fail' %}bg-danger{% else %}bg-success{% endif %}">{{ s.grade }}</span></td>
+                                <td>
+                                    <a href="/delete/{{ s.regNo }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this record?')">Delete</a>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="6" class="text-center">No records found.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

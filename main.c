@@ -1,7 +1,3 @@
-/*
-    Project Title: Student Performance Analyzer
-*/
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -21,55 +17,40 @@ typedef struct {
 } Student;
 
 // Function Prototypes
-void addStudent();
-void displayAllStudents();
-void searchStudent();
-void updateMarks();
-void deleteRecord();
-void displayStatistics();
 void calculateResult(Student *s);
 char determineGrade(float average);
 void clearBuffer();
 
-int main() {
-    int choice;
+// CLI Wrapper functions for Python
+void cliAdd(int reg, char* name, float m1, float m2, float m3);
+void cliList();
+void cliUpdate(int reg, float m1, float m2, float m3);
+void cliDelete(int reg);
+void cliStats();
 
-    while (1) {
-        printf("\n--- Smart Student Performance Analyzer ---\n");
-        printf("1. Add Student Record\n");
-        printf("2. Display All Records\n");
-        printf("3. Search Student by RegNo\n");
-        printf("4. Update Marks\n");
-        printf("5. Delete Record\n");
-        printf("6. View Class Statistics & Grade Distribution\n");
-        printf("7. Exit\n");
-        printf("Enter your choice: ");
-        
-        if (scanf("%d", &choice) != 1) {
-            printf("Invalid input. Please enter a number.\n");
-            clearBuffer();
-            continue;
+int main(int argc, char *argv[]) {
+    if (argc > 1) {
+        if (strcmp(argv[1], "add") == 0 && argc == 7) {
+            cliAdd(atoi(argv[2]), argv[3], atof(argv[4]), atof(argv[5]), atof(argv[6]));
+        } else if (strcmp(argv[1], "list") == 0) {
+            cliList();
+        } else if (strcmp(argv[1], "update") == 0 && argc == 6) {
+            cliUpdate(atoi(argv[2]), atof(argv[3]), atof(argv[4]), atof(argv[5]));
+        } else if (strcmp(argv[1], "delete") == 0 && argc == 3) {
+            cliDelete(atoi(argv[2]));
+        } else if (strcmp(argv[1], "stats") == 0) {
+            cliStats();
         }
-
-        switch (choice) {
-            case 1: addStudent(); break;
-            case 2: displayAllStudents(); break;
-            case 3: searchStudent(); break;
-            case 4: updateMarks(); break;
-            case 5: deleteRecord(); break;
-            case 6: displayStatistics(); break;
-            case 7: printf("Exiting program.\n"); exit(0);
-            default: printf("Invalid choice. Try again.\n");
-        }
+        return 0;
     }
+
+    printf("Interactive menu is available when running without arguments.\n");
     return 0;
 }
 
 void calculateResult(Student *s) {
     s->total = 0;
-    for (int i = 0; i < NUM_SUBJECTS; i++) {
-        s->total += s->marks[i];
-    }
+    for (int i = 0; i < NUM_SUBJECTS; i++) s->total += s->marks[i];
     s->average = s->total / NUM_SUBJECTS;
     s->grade = determineGrade(s->average);
 }
@@ -81,192 +62,78 @@ char determineGrade(float average) {
     return 'F';
 }
 
-void addStudent() {
+void cliAdd(int reg, char* name, float m1, float m2, float m3) {
     FILE *fp = fopen(FILE_NAME, "ab");
-    if (!fp) {
-        printf("Error opening file!\n");
-        return;
-    }
-
+    if (!fp) return;
     Student s;
-    printf("Enter Registration Number: ");
-    if (scanf("%d", &s.regNo) != 1) {
-        printf("Invalid input.\n");
-        clearBuffer();
-        fclose(fp);
-        return;
-    }
-    clearBuffer();
-
-    printf("Enter Name: ");
-    if (fgets(s.name, MAX_NAME, stdin)) {
-        s.name[strcspn(s.name, "\n")] = 0;
-    }
-
-    for (int i = 0; i < NUM_SUBJECTS; i++) {
-        do {
-            printf("Enter marks for Subject %d (0-100): ", i + 1);
-            if (scanf("%f", &s.marks[i]) != 1) {
-                clearBuffer();
-                s.marks[i] = -1; // Force retry
-            }
-        } while (s.marks[i] < 0 || s.marks[i] > 100);
-    }
-
+    s.regNo = reg;
+    strncpy(s.name, name, MAX_NAME);
+    s.marks[0] = m1; s.marks[1] = m2; s.marks[2] = m3;
     calculateResult(&s);
     fwrite(&s, sizeof(Student), 1, fp);
     fclose(fp);
-    printf("Record added successfully!\n");
+    printf("SUCCESS\n");
 }
 
-void displayAllStudents() {
-    FILE *fp = fopen(FILE_NAME, "rb");
-    if (!fp) {
-        printf("No records found.\n");
-        return;
-    }
-
-    Student s;
-    printf("\n%-10s %-20s %-8s %-8s %-5s\n", "RegNo", "Name", "Total", "Avg", "Grade");
-    printf("------------------------------------------------------------\n");
-    while (fread(&s, sizeof(Student), 1, fp)) {
-        printf("%-10d %-20s %-8.2f %-8.2f %-5c\n", s.regNo, s.name, s.total, s.average, s.grade);
-    }
-    fclose(fp);
-}
-
-void searchStudent() {
+void cliList() {
     FILE *fp = fopen(FILE_NAME, "rb");
     if (!fp) return;
-
-    int reg, found = 0;
-    printf("Enter Registration Number to search: ");
-    if (scanf("%d", &reg) != 1) {
-        printf("Invalid input.\n");
-        clearBuffer();
-        fclose(fp);
-        return;
-    }
-
     Student s;
     while (fread(&s, sizeof(Student), 1, fp)) {
-        if (s.regNo == reg) {
-            printf("\nRecord Found:\nName: %s\nAverage: %.2f\nGrade: %c\n", s.name, s.average, s.grade);
-            found = 1;
-            break;
-        }
+        printf("%d|%s|%.2f|%.2f|%.2f|%.2f|%.2f|%c\n", 
+               s.regNo, s.name, s.marks[0], s.marks[1], s.marks[2], s.total, s.average, s.grade);
     }
-    if (!found) printf("Student with RegNo %d not found.\n", reg);
     fclose(fp);
 }
 
-void updateMarks() {
+void cliUpdate(int reg, float m1, float m2, float m3) {
     FILE *fp = fopen(FILE_NAME, "rb+");
     if (!fp) return;
-
-    int reg, found = 0;
-    printf("Enter RegNo to update marks: ");
-    if (scanf("%d", &reg) != 1) {
-        printf("Invalid input.\n");
-        clearBuffer();
-        fclose(fp);
-        return;
-    }
-
     Student s;
+    int found = 0;
     while (fread(&s, sizeof(Student), 1, fp)) {
         if (s.regNo == reg) {
-            printf("Updating marks for %s\n", s.name);
-            for (int i = 0; i < NUM_SUBJECTS; i++) {
-                printf("New marks for Subject %d: ", i + 1);
-                scanf("%f", &s.marks[i]);
-            }
+            s.marks[0] = m1; s.marks[1] = m2; s.marks[2] = m3;
             calculateResult(&s);
             fseek(fp, -sizeof(Student), SEEK_CUR);
             fwrite(&s, sizeof(Student), 1, fp);
-            found = 1;
-            break;
+            found = 1; break;
         }
     }
-    if (found) printf("Record updated.\n");
-    else printf("Record not found.\n");
     fclose(fp);
+    if (found) printf("SUCCESS\n");
 }
 
-void deleteRecord() {
+void cliDelete(int reg) {
     FILE *fp = fopen(FILE_NAME, "rb");
     FILE *ft = fopen(TEMP_FILE, "wb");
-    if (!fp || !ft) {
-        printf("Error opening file!\n");
-        return;
-    }
-
-    int reg, found = 0;
-    printf("Enter RegNo to delete: ");
-    if (scanf("%d", &reg) != 1) {
-        printf("Invalid input.\n");
-        clearBuffer();
-        fclose(fp);
-        fclose(ft);
-        return;
-    }
-
+    if (!fp || !ft) return;
     Student s;
     while (fread(&s, sizeof(Student), 1, fp)) {
-        if (s.regNo == reg) {
-            found = 1;
-            printf("Record for %s deleted.\n", s.name);
-        } else {
-            fwrite(&s, sizeof(Student), 1, ft);
-        }
+        if (s.regNo != reg) fwrite(&s, sizeof(Student), 1, ft);
     }
-    fclose(fp);
-    fclose(ft);
-    remove(FILE_NAME);
-    rename(TEMP_FILE, FILE_NAME);
-
-    if (!found) printf("Record not found.\n");
+    fclose(fp); fclose(ft);
+    remove(FILE_NAME); rename(TEMP_FILE, FILE_NAME);
+    printf("SUCCESS\n");
 }
 
-void displayStatistics() {
+void cliStats() {
     FILE *fp = fopen(FILE_NAME, "rb");
     if (!fp) return;
-
     Student s, topper;
     float classTotal = 0, highest = -1, lowest = 1000;
-    int count = 0, aCount = 0, bCount = 0, cCount = 0, fCount = 0;
-
+    int count = 0, a = 0, b = 0, c = 0, f = 0;
     while (fread(&s, sizeof(Student), 1, fp)) {
         classTotal += s.average;
-        if (s.total > highest) {
-            highest = s.total;
-            topper = s;
-        }
+        if (s.total > highest) { highest = s.total; topper = s; }
         if (s.total < lowest) lowest = s.total;
-
-        if (s.grade == 'A') aCount++;
-        else if (s.grade == 'B') bCount++;
-        else if (s.grade == 'C') cCount++;
-        else fCount++;
-        
+        if (s.grade == 'A') a++; else if (s.grade == 'B') b++;
+        else if (s.grade == 'C') c++; else f++;
         count++;
     }
     fclose(fp);
-
-    if (count == 0) {
-        printf("No records to analyze.\n");
-        return;
-    }
-
-    printf("\n--- Class Statistics ---\n");
-    printf("Class Average: %.2f\n", classTotal / count);
-    printf("Highest Total: %.2f (Topper: %s)\n", highest, topper.name);
-    printf("Lowest Total: %.2f\n", lowest);
-    printf("\n--- Grade Distribution ---\n");
-    printf("A: %d, B: %d, C: %d, Fail: %d\n", aCount, bCount, cCount, fCount);
+    if (count > 0)
+        printf("%.2f|%s|%.2f|%.2f|%d|%d|%d|%d\n", classTotal/count, topper.name, highest, lowest, a, b, c, f);
 }
 
-void clearBuffer() {
-    int c;
-    while ((c = getchar()) != '\n' && c != EOF);
-}
+void clearBuffer() { int c; while ((c = getchar()) != '\n' && c != EOF); }
