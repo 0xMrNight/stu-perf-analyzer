@@ -1,5 +1,5 @@
 /*
-    Project Title: Smart Student Performance Analyzer
+    Project Title: Student Performance Analyzer
 */
 
 #include <stdio.h>
@@ -7,6 +7,7 @@
 #include <string.h>
 
 #define FILE_NAME "students.dat"
+#define TEMP_FILE "temp.dat"
 #define MAX_NAME 50
 #define NUM_SUBJECTS 3
 
@@ -24,28 +25,13 @@ void addStudent();
 void displayAllStudents();
 void searchStudent();
 void updateMarks();
+void deleteRecord();
 void displayStatistics();
 void calculateResult(Student *s);
 char determineGrade(float average);
 void clearBuffer();
 
-#ifdef __EMSCRIPTEN__
-#include <emscripten.h>
-#endif
-
 int main() {
-    // Mount the IDBFS file system so students.dat survives a refresh
-    #ifdef __EMSCRIPTEN__
-    EM_ASM(
-        FS.mkdir('/data');
-        FS.mount(IDBFS, {}, '/data');
-        FS.syncfs(true, function (err) {
-            // Error handling
-        });
-    );
-    #define FILE_NAME "/data/students.dat"
-    #endif
-
     int choice;
 
     while (1) {
@@ -54,8 +40,9 @@ int main() {
         printf("2. Display All Records\n");
         printf("3. Search Student by RegNo\n");
         printf("4. Update Marks\n");
-        printf("5. View Class Statistics & Grade Distribution\n");
-        printf("6. Exit\n");
+        printf("5. Delete Record\n");
+        printf("6. View Class Statistics & Grade Distribution\n");
+        printf("7. Exit\n");
         printf("Enter your choice: ");
         
         if (scanf("%d", &choice) != 1) {
@@ -69,8 +56,9 @@ int main() {
             case 2: displayAllStudents(); break;
             case 3: searchStudent(); break;
             case 4: updateMarks(); break;
-            case 5: displayStatistics(); break;
-            case 6: printf("Exiting program.\n"); exit(0);
+            case 5: deleteRecord(); break;
+            case 6: displayStatistics(); break;
+            case 7: printf("Exiting program.\n"); exit(0);
             default: printf("Invalid choice. Try again.\n");
         }
     }
@@ -103,7 +91,7 @@ void addStudent() {
     Student s;
     printf("Enter Registration Number: ");
     if (scanf("%d", &s.regNo) != 1) {
-        printf("Invalid Registration Number.\n");
+        printf("Invalid input.\n");
         clearBuffer();
         fclose(fp);
         return;
@@ -119,9 +107,8 @@ void addStudent() {
         do {
             printf("Enter marks for Subject %d (0-100): ", i + 1);
             if (scanf("%f", &s.marks[i]) != 1) {
-                printf("Invalid input. Setting marks to 0.\n");
-                s.marks[i] = 0;
                 clearBuffer();
+                s.marks[i] = -1; // Force retry
             }
         } while (s.marks[i] < 0 || s.marks[i] > 100);
     }
@@ -142,21 +129,15 @@ void displayAllStudents() {
     Student s;
     printf("\n%-10s %-20s %-8s %-8s %-5s\n", "RegNo", "Name", "Total", "Avg", "Grade");
     printf("------------------------------------------------------------\n");
-    int count = 0;
     while (fread(&s, sizeof(Student), 1, fp)) {
         printf("%-10d %-20s %-8.2f %-8.2f %-5c\n", s.regNo, s.name, s.total, s.average, s.grade);
-        count++;
     }
-    if (count == 0) printf("No records found in file.\n");
     fclose(fp);
 }
 
 void searchStudent() {
     FILE *fp = fopen(FILE_NAME, "rb");
-    if (!fp) {
-        printf("No records found.\n");
-        return;
-    }
+    if (!fp) return;
 
     int reg, found = 0;
     printf("Enter Registration Number to search: ");
@@ -170,11 +151,7 @@ void searchStudent() {
     Student s;
     while (fread(&s, sizeof(Student), 1, fp)) {
         if (s.regNo == reg) {
-            printf("\nRecord Found:\n");
-            printf("Name: %s\n", s.name);
-            printf("Total: %.2f\n", s.total);
-            printf("Average: %.2f\n", s.average);
-            printf("Grade: %c\n", s.grade);
+            printf("\nRecord Found:\nName: %s\nAverage: %.2f\nGrade: %c\n", s.name, s.average, s.grade);
             found = 1;
             break;
         }
@@ -185,10 +162,7 @@ void searchStudent() {
 
 void updateMarks() {
     FILE *fp = fopen(FILE_NAME, "rb+");
-    if (!fp) {
-        printf("No records found.\n");
-        return;
-    }
+    if (!fp) return;
 
     int reg, found = 0;
     printf("Enter RegNo to update marks: ");
@@ -204,13 +178,8 @@ void updateMarks() {
         if (s.regNo == reg) {
             printf("Updating marks for %s\n", s.name);
             for (int i = 0; i < NUM_SUBJECTS; i++) {
-                do {
-                    printf("New marks for Subject %d (0-100): ", i + 1);
-                    if (scanf("%f", &s.marks[i]) != 1) {
-                        clearBuffer();
-                        continue;
-                    }
-                } while (s.marks[i] < 0 || s.marks[i] > 100);
+                printf("New marks for Subject %d: ", i + 1);
+                scanf("%f", &s.marks[i]);
             }
             calculateResult(&s);
             fseek(fp, -sizeof(Student), SEEK_CUR);
@@ -224,15 +193,47 @@ void updateMarks() {
     fclose(fp);
 }
 
-void displayStatistics() {
+void deleteRecord() {
     FILE *fp = fopen(FILE_NAME, "rb");
-    if (!fp) {
-        printf("No records found.\n");
+    FILE *ft = fopen(TEMP_FILE, "wb");
+    if (!fp || !ft) {
+        printf("Error opening file!\n");
         return;
     }
 
+    int reg, found = 0;
+    printf("Enter RegNo to delete: ");
+    if (scanf("%d", &reg) != 1) {
+        printf("Invalid input.\n");
+        clearBuffer();
+        fclose(fp);
+        fclose(ft);
+        return;
+    }
+
+    Student s;
+    while (fread(&s, sizeof(Student), 1, fp)) {
+        if (s.regNo == reg) {
+            found = 1;
+            printf("Record for %s deleted.\n", s.name);
+        } else {
+            fwrite(&s, sizeof(Student), 1, ft);
+        }
+    }
+    fclose(fp);
+    fclose(ft);
+    remove(FILE_NAME);
+    rename(TEMP_FILE, FILE_NAME);
+
+    if (!found) printf("Record not found.\n");
+}
+
+void displayStatistics() {
+    FILE *fp = fopen(FILE_NAME, "rb");
+    if (!fp) return;
+
     Student s, topper;
-    float classTotal = 0, highest = -1, lowest = 1001;
+    float classTotal = 0, highest = -1, lowest = 1000;
     int count = 0, aCount = 0, bCount = 0, cCount = 0, fCount = 0;
 
     while (fread(&s, sizeof(Student), 1, fp)) {
@@ -258,12 +259,11 @@ void displayStatistics() {
     }
 
     printf("\n--- Class Statistics ---\n");
-    printf("Total Students: %d\n", count);
     printf("Class Average: %.2f\n", classTotal / count);
     printf("Highest Total: %.2f (Topper: %s)\n", highest, topper.name);
     printf("Lowest Total: %.2f\n", lowest);
     printf("\n--- Grade Distribution ---\n");
-    printf("A: %d\nB: %d\nC: %d\nFail: %d\n", aCount, bCount, cCount, fCount);
+    printf("A: %d, B: %d, C: %d, Fail: %d\n", aCount, bCount, cCount, fCount);
 }
 
 void clearBuffer() {
