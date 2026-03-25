@@ -31,7 +31,7 @@ void updStu(int reg, float m1, float m2, float m3);
 void delStu(int reg);
 void stats();
 
-// Menu function
+int findStu(int reg);
 void menu();
 
 int main(int argc, char *argv[]) {
@@ -56,7 +56,7 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
-// Interactive menu that calls CLI functions
+// Interactive menu
 void menu() {
     int choice;
     while (1) {
@@ -84,6 +84,13 @@ void menu() {
                 float m[3];
                 printf("Enter Registration Number: ");
                 if (scanf("%d", &reg) != 1) { printf("Invalid input.\n"); clearBuffer(); break; }
+                
+                if (findStu(reg)) {
+                    printf("Error: Student with RegNo %d already exists.\n", reg);
+                    clearBuffer();
+                    break;
+                }
+
                 clearBuffer();
                 printf("Enter Name: ");
                 fgets(name, MAX_NAME, stdin);
@@ -98,22 +105,35 @@ void menu() {
                 printf("Record added successfully.\n");
                 break;
             }
-            case 2:
-                printf("\nRegNo|Name|M1|M2|M3|Total|Avg|Grade\n");
-                printf("--------------------------------------\n");
-                if (listStu() == 0) {
-                    printf("No records found in database.\n");
-                }
-                break;
-            case 3: {
-                int reg;
-                float m[3];
-                if (listStu() == 0) {
+            case 2: {
+                FILE *fp = fopen(FILE_NAME, "rb");
+                if (!fp) {
                     printf("No records found in database.\n");
                     break;
                 }
+                fseek(fp, 0, SEEK_END);
+                if (ftell(fp) == 0) {
+                    printf("No records found in database.\n");
+                    fclose(fp);
+                    break;
+                }
+                fclose(fp);
+                printf("\nRegNo|Name|M1|M2|M3|Total|Avg|Grade\n");
+                printf("--------------------------------------\n");
+                listStu();
+                break;
+            }
+            case 3: {
+                int reg;
+                float m[3];
                 printf("Enter RegNo to update: ");
                 if (scanf("%d", &reg) != 1) { printf("Invalid input.\n"); clearBuffer(); break; }
+                
+                if (!findStu(reg)) {
+                    printf("Student with RegNo %d not found.\n", reg);
+                    break;
+                }
+
                 for (int i = 0; i < 3; i++) {
                     do {
                         printf("Enter new marks for Subject %d (0-100): ", i + 1);
@@ -131,15 +151,24 @@ void menu() {
                 printf("Record processed.\n");
                 break;
             }
-            case 5:
-                printf("\nAvg|Topper|High|Low|A|B|C|F\n");
-                printf("-------------------------------\n");
-                if (listStu() == 0) {
+            case 5: {
+                FILE *fp = fopen(FILE_NAME, "rb");
+                if (!fp) {
                     printf("No records found in database.\n");
                     break;
                 }
+                fseek(fp, 0, SEEK_END);
+                if (ftell(fp) == 0) {
+                    printf("No records found in database.\n");
+                    fclose(fp);
+                    break;
+                }
+                fclose(fp);
+                printf("\nAvg|Topper|High|Low|A|B|C|F\n");
+                printf("-------------------------------\n");
                 stats();
                 break;
+            }
             default:
                 printf("Invalid choice. Try again.\n");
         }
@@ -243,6 +272,21 @@ void stats() {
         printf("%.2f|%s|%.2f|%.2f|%d|%d|%d|%d\n", classTotal/count, topper.name, highest, lowest, a, b, c, f);
     else
         printf("No records available.\n");
+}
+
+// Helper to check if student exists
+int findStu(int reg) {
+    FILE *fp = fopen(FILE_NAME, "rb");
+    if (!fp) return 0;
+    Student s;
+    while (fread(&s, sizeof(Student), 1, fp)) {
+        if (s.regNo == reg) {
+            fclose(fp);
+            return 1;
+        }
+    }
+    fclose(fp);
+    return 0;
 }
 
 // Clear input buffer to handle invalid inputs
